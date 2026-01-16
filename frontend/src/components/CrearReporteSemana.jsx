@@ -53,7 +53,6 @@ export default function CrearReporteSemana({ usuario, redes, volver }) {
   const cambiar = (i, grupo, campo, valor) => {
     const copia = [...filas];
 
-    // permitir vacío
     if (valor === "") {
       copia[i][grupo][campo] = "";
     } else {
@@ -62,7 +61,6 @@ export default function CrearReporteSemana({ usuario, redes, volver }) {
       copia[i][grupo][campo] = numero;
     }
 
-    // 🔹 TOT = HNO + INV
     if (grupo === "infoCelula" && (campo === "HNO" || campo === "INV")) {
       const hno = Number(copia[i].infoCelula.HNO || 0);
       const inv = Number(copia[i].infoCelula.INV || 0);
@@ -84,15 +82,18 @@ export default function CrearReporteSemana({ usuario, redes, volver }) {
   };
 
   /* =========================
-     💾 GUARDAR (VALIDA DUPLICADO)
+     💾 GUARDAR (VALIDACIÓN REAL)
   ========================== */
   const guardar = async () => {
     try {
-      const res = await api.get(
-        `/reportes/sector/${usuario.sector}?anio=${anio}&semana=${semana}`
+      const res = await api.get(`/reportes/sector/${usuario.sector}`);
+
+      // ✅ VALIDACIÓN CORRECTA
+      const existeSemana = res.data.some(
+        r => r.anio === anio && r.semana === Number(semana)
       );
 
-      if (res.data.length > 0) {
+      if (existeSemana) {
         alert(
           `❌ Ya existe un reporte para el sector ${usuario.sector} en la semana ${semana}`
         );
@@ -256,7 +257,6 @@ export default function CrearReporteSemana({ usuario, redes, volver }) {
   );
 }
 
-/* 🎯 ESTILO INPUT TABLA (SIN CAMBIOS) */
 const styles = {
   inputTabla: {
     width: "100%",
