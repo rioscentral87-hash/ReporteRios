@@ -10,7 +10,7 @@ export default function CrearReporteSemana({ usuario, redes, volver }) {
   const semanas = Array.from({ length: 52 }, (_, i) => i + 1);
 
   /* =========================
-     ➕ CREAR FILAS
+     ➕ CREAR FILAS (VACÍAS)
   ========================== */
   const crear = () => {
     if (!semana) {
@@ -23,25 +23,25 @@ export default function CrearReporteSemana({ usuario, redes, volver }) {
         anio,
         semana: Number(semana),
         sector: usuario.sector,
-        supervisor: usuario.nombre, // ✅ SE GUARDA SUPERVISOR
+        supervisor: usuario.nombre,
         red: r.numero,
         lider: r.lider,
-        tipoRed: r.tipo || "Adulto", // ✅ NUEVO (por modelo)
+        tipoRed: r.tipo || "Adulto",
         infoIglesia: {
-          martes: 0,
-          jueves: 0,
-          domingo: 0
+          martes: "",
+          jueves: "",
+          domingo: ""
         },
         infoCelula: {
-          HNO: 0,
-          INV: 0,
-          TOT: 0,
-          REC: 0,
-          Conv: 0,
-          VP: 0,
-          BA: 0,
-          EVG: 0,
-          Ofrenda: 0
+          HNO: "",
+          INV: "",
+          TOT: "",
+          REC: "",
+          Conv: "",
+          VP: "",
+          BA: "",
+          EVG: "",
+          Ofrenda: ""
         }
       }))
     );
@@ -53,18 +53,34 @@ export default function CrearReporteSemana({ usuario, redes, volver }) {
   const cambiar = (i, grupo, campo, valor) => {
     const copia = [...filas];
 
-    let numero = Number(valor);
-    if (isNaN(numero) || numero < 0) numero = 0;
-
-    copia[i][grupo][campo] = numero;
+    // permitir vacío
+    if (valor === "") {
+      copia[i][grupo][campo] = "";
+    } else {
+      let numero = Number(valor);
+      if (isNaN(numero) || numero < 0) numero = 0;
+      copia[i][grupo][campo] = numero;
+    }
 
     // 🔹 TOT = HNO + INV
     if (grupo === "infoCelula" && (campo === "HNO" || campo === "INV")) {
-      copia[i].infoCelula.TOT =
-        copia[i].infoCelula.HNO + copia[i].infoCelula.INV;
+      const hno = Number(copia[i].infoCelula.HNO || 0);
+      const inv = Number(copia[i].infoCelula.INV || 0);
+      copia[i].infoCelula.TOT = hno + inv;
     }
 
     setFilas(copia);
+  };
+
+  /* =========================
+     🔁 LIMPIAR VACÍOS → 0
+  ========================== */
+  const limpiarNumeros = obj => {
+    const limpio = {};
+    for (const k in obj) {
+      limpio[k] = obj[k] === "" ? 0 : Number(obj[k]);
+    }
+    return limpio;
   };
 
   /* =========================
@@ -83,7 +99,13 @@ export default function CrearReporteSemana({ usuario, redes, volver }) {
         return;
       }
 
-      await api.post("/reportes", filas);
+      const datosFinales = filas.map(f => ({
+        ...f,
+        infoIglesia: limpiarNumeros(f.infoIglesia),
+        infoCelula: limpiarNumeros(f.infoCelula)
+      }));
+
+      await api.post("/reportes", datosFinales);
       alert("✅ Reporte semanal guardado correctamente");
       volver();
     } catch (error) {
@@ -97,19 +119,19 @@ export default function CrearReporteSemana({ usuario, redes, volver }) {
   ========================== */
   const totales = filas.reduce(
     (t, r) => {
-      t.martes += r.infoIglesia.martes;
-      t.jueves += r.infoIglesia.jueves;
-      t.domingo += r.infoIglesia.domingo;
+      t.martes += Number(r.infoIglesia.martes || 0);
+      t.jueves += Number(r.infoIglesia.jueves || 0);
+      t.domingo += Number(r.infoIglesia.domingo || 0);
 
-      t.HNO += r.infoCelula.HNO;
-      t.INV += r.infoCelula.INV;
-      t.TOT += r.infoCelula.TOT;
-      t.REC += r.infoCelula.REC;
-      t.Conv += r.infoCelula.Conv;
-      t.VP += r.infoCelula.VP;
-      t.BA += r.infoCelula.BA;
-      t.EVG += r.infoCelula.EVG;
-      t.Ofrenda += r.infoCelula.Ofrenda;
+      t.HNO += Number(r.infoCelula.HNO || 0);
+      t.INV += Number(r.infoCelula.INV || 0);
+      t.TOT += Number(r.infoCelula.TOT || 0);
+      t.REC += Number(r.infoCelula.REC || 0);
+      t.Conv += Number(r.infoCelula.Conv || 0);
+      t.VP += Number(r.infoCelula.VP || 0);
+      t.BA += Number(r.infoCelula.BA || 0);
+      t.EVG += Number(r.infoCelula.EVG || 0);
+      t.Ofrenda += Number(r.infoCelula.Ofrenda || 0);
       return t;
     },
     {
@@ -132,22 +154,17 @@ export default function CrearReporteSemana({ usuario, redes, volver }) {
     <div>
       <h3>➕ Crear Reporte Semanal</h3>
 
-      {/* SELECTORES */}
       <div style={{ display: "flex", gap: 10 }}>
         <select value={anio} onChange={e => setAnio(Number(e.target.value))}>
           {[2025, 2026, 2027].map(a => (
-            <option key={a} value={a}>
-              {a}
-            </option>
+            <option key={a} value={a}>{a}</option>
           ))}
         </select>
 
         <select value={semana} onChange={e => setSemana(e.target.value)}>
           <option value="">Semana</option>
           {semanas.map(s => (
-            <option key={s} value={s}>
-              Semana {s}
-            </option>
+            <option key={s} value={s}>Semana {s}</option>
           ))}
         </select>
 
@@ -156,64 +173,8 @@ export default function CrearReporteSemana({ usuario, redes, volver }) {
 
       {filas.length > 0 && (
         <>
-          {/* EXPORTAR */}
-          <div style={{ marginTop: 10 }}>
-            <button onClick={() => exportarExcel(filas, "Reporte_Semanal")}>
-              📗 Excel
-            </button>
-
-            <button
-              onClick={() =>
-                exportarPDF(
-                  [
-                    "Red",
-                    "Líder",
-                    "Mar",
-                    "Jue",
-                    "Dom",
-                    "HNO",
-                    "INV",
-                    "TOT",
-                    "REC",
-                    "Conv",
-                    "VP",
-                    "BA",
-                    "EVG",
-                    "Ofrenda"
-                  ],
-                  filas.map(r => [
-                    r.red,
-                    r.lider,
-                    r.infoIglesia.martes,
-                    r.infoIglesia.jueves,
-                    r.infoIglesia.domingo,
-                    r.infoCelula.HNO,
-                    r.infoCelula.INV,
-                    r.infoCelula.TOT,
-                    r.infoCelula.REC,
-                    r.infoCelula.Conv,
-                    r.infoCelula.VP,
-                    r.infoCelula.BA,
-                    r.infoCelula.EVG,
-                    r.infoCelula.Ofrenda
-                  ]),
-                  "Reporte_Semanal"
-                )
-              }
-            >
-              📕 PDF
-            </button>
-          </div>
-
-          {/* TABLA RESPONSIVE */}
           <div style={{ overflowX: "auto", marginTop: 10 }}>
-            <table
-              style={{
-                width: "100%",
-                minWidth: 900,
-                tableLayout: "fixed"
-              }}
-            >
+            <table style={{ width: "100%", minWidth: 900, tableLayout: "fixed" }}>
               <thead>
                 <tr>
                   <th>Red</th>
@@ -239,11 +200,10 @@ export default function CrearReporteSemana({ usuario, redes, volver }) {
                     <td>{r.red}</td>
                     <td>{r.lider}</td>
 
-                    {["martes", "jueves", "domingo"].map(c => (
+                    {["martes","jueves","domingo"].map(c => (
                       <td key={c}>
                         <input
                           type="number"
-                          min="0"
                           value={r.infoIglesia[c]}
                           style={styles.inputTabla}
                           onChange={e =>
@@ -253,21 +213,10 @@ export default function CrearReporteSemana({ usuario, redes, volver }) {
                       </td>
                     ))}
 
-                    {[
-                      "HNO",
-                      "INV",
-                      "TOT",
-                      "REC",
-                      "Conv",
-                      "VP",
-                      "BA",
-                      "EVG",
-                      "Ofrenda"
-                    ].map(c => (
+                    {["HNO","INV","TOT","REC","Conv","VP","BA","EVG","Ofrenda"].map(c => (
                       <td key={c}>
                         <input
                           type="number"
-                          min="0"
                           disabled={c === "TOT"}
                           value={r.infoCelula[c]}
                           style={styles.inputTabla}
@@ -280,7 +229,6 @@ export default function CrearReporteSemana({ usuario, redes, volver }) {
                   </tr>
                 ))}
 
-                {/* TOTALES */}
                 <tr style={{ fontWeight: "bold" }}>
                   <td colSpan={2}>TOTALES</td>
                   <td>{totales.martes}</td>
@@ -308,7 +256,7 @@ export default function CrearReporteSemana({ usuario, redes, volver }) {
   );
 }
 
-/* 🎯 ESTILO INPUT TABLA */
+/* 🎯 ESTILO INPUT TABLA (SIN CAMBIOS) */
 const styles = {
   inputTabla: {
     width: "100%",
