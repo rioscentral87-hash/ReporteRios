@@ -1,7 +1,6 @@
 const express = require("express");
 const router = express.Router();
 const Sector = require("../models/Sector");
-const Usuario = require("../models/Usuario");
 
 /* ===========================
    GET - TODOS LOS SECTORES
@@ -11,107 +10,96 @@ router.get("/", async (req, res) => {
     const sectores = await Sector.find();
     res.json(sectores);
   } catch (e) {
+    console.error("❌ Error obteniendo sectores:", e);
     res.status(500).json({ message: "Error obteniendo sectores" });
   }
 });
 
 /* ===========================
-   GET - SECTOR POR NÚMERO
+   GET - SECTOR POR NÚMERO + TIPO (OBLIGATORIO)
 =========================== */
 router.get("/:numero", async (req, res) => {
   try {
+    const numero = Number(req.params.numero);
+    const { tipoSupervisor } = req.query;
+
+    console.log("🔍 Buscando sector:", {
+      sector: numero,
+      tipoSupervisor
+    });
+
+    if (!tipoSupervisor) {
+      return res.status(400).json({
+        message: "tipoSupervisor es obligatorio para buscar un sector"
+      });
+    }
+
     const sector = await Sector.findOne({
-      sector: Number(req.params.numero)
+      sector: numero,
+      tipoSupervisor
     });
 
     if (!sector) {
-      return res.status(404).json({ message: "Sector no encontrado" });
+      return res.status(404).json({
+        message: "Sector no encontrado",
+        debug: { sector: numero, tipoSupervisor }
+      });
     }
 
     res.json(sector);
   } catch (e) {
+    console.error("❌ Error buscando sector:", e);
     res.status(500).json({ message: "Error del servidor" });
   }
 });
 
 /* ===========================
-   POST - CREAR SECTOR + USUARIO
+   POST - CREAR SECTOR / SUPERVISOR
 =========================== */
 router.post("/", async (req, res) => {
   try {
-    const {
-      sector,
-      supervisor,
-      tipoSupervisor,
-      redes,
-      password // 👈 VIENE DEL MODAL
-    } = req.body;
+    const { sector, supervisor, tipoSupervisor, redes } = req.body;
 
-    if (!sector || !supervisor || !password) {
+    if (!sector || !supervisor || !tipoSupervisor) {
       return res.status(400).json({
-        message: "Sector, supervisor y password son obligatorios"
+        message: "Sector, supervisor y tipoSupervisor son obligatorios"
       });
     }
 
-    // 🔒 Verificar si ya existe el sector
-    const existeSector = await Sector.findOne({ sector });
-    if (existeSector) {
-      return res.status(400).json({ message: "El sector ya existe" });
-    }
+    const sectorNum = Number(sector);
 
-    // 🔒 Verificar si ya existe el usuario
-    const existeUsuario = await Usuario.findOne({ nombre: supervisor });
-    if (existeUsuario) {
+    if (isNaN(sectorNum) || sectorNum <= 0) {
       return res.status(400).json({
-        message: "Ya existe un usuario con ese nombre"
+        message: "El sector debe ser un número válido"
       });
     }
 
-    // ✅ Crear Sector
-    const nuevoSector = await Sector.create({
-      sector,
+    // 🔒 VALIDAR DUPLICADO sector + tipoSupervisor
+    const existe = await Sector.findOne({
+      sector: sectorNum,
+      tipoSupervisor
+    });
+
+    if (existe) {
+      return res.status(400).json({
+        message: `Ya existe el sector ${sectorNum} para el tipo ${tipoSupervisor}`
+      });
+    }
+
+    const nuevoSector = new Sector({
+      sector: sectorNum,
       supervisor,
       tipoSupervisor,
-      redes
+      redes: redes || []
     });
 
-    // ✅ Crear Usuario Supervisor
-    await Usuario.create({
-      nombre: supervisor,
-      password,
-      rol: "SUPERVISOR",
-      sector
-    });
+    await nuevoSector.save();
 
-    res.json({
-      message: "Sector y usuario creados correctamente",
-      sector: nuevoSector
-    });
-  } catch (error) {
-    console.error("ERROR CREANDO SECTOR:", error);
+    res.json(nuevoSector);
+  } catch (e) {
+    console.error("❌ Error creando sector:", e);
     res.status(500).json({ message: "Error creando sector" });
   }
 });
 
-/* ===========================
-   PUT - ACTUALIZAR SECTOR
-=========================== */
-router.put("/:id", async (req, res) => {
-  try {
-    const actualizado = await Sector.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    );
-
-    res.json(actualizado);
-  } catch (e) {
-    res.status(500).json({ message: "Error actualizando sector" });
-  }
-});
-
 module.exports = router;
-
-
-
-
