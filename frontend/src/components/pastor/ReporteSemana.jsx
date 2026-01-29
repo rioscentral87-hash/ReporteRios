@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import api from "../../services/api";
 import { exportarExcel, exportarPDF } from "../../utils/exportar";
 
-/* 📅 CALCULAR SEMANA ACTUAL */
+/* CALCULAR SEMANA ACTUAL */
 function obtenerSemanaActual() {
   const hoy = new Date();
   const inicioAnio = new Date(hoy.getFullYear(), 0, 1);
@@ -14,18 +14,18 @@ export default function ReporteSemana() {
   const [reportes, setReportes] = useState([]);
 
   const anioActual = new Date().getFullYear();
-  const semanaActual = obtenerSemanaActual();
+  const semanaActual = obtenerSemanaActual()-1;
 
   useEffect(() => {
     api.get("/reportes").then(r => setReportes(r.data || []));
   }, []);
 
-  /* 🔍 SOLO SEMANA ACTUAL */
+  /*  SOLO SEMANA ACTUAL */
   const filtrados = reportes.filter(
     r => r.anio === anioActual && r.semana === semanaActual
   );
 
-  /* 🔢 TOTALES */
+  /*  TOTALES */
   const totales = filtrados.reduce(
     (t, r) => {
       t.martes += r.infoIglesia.martes;
@@ -119,6 +119,7 @@ export default function ReporteSemana() {
               <th>BA</th>
               <th>EVG</th>
               <th>Ofrenda</th>
+              <th>Revisión Comité</th>
             </tr>
           </thead>
 
@@ -141,6 +142,26 @@ export default function ReporteSemana() {
                 <td>{r.infoCelula.BA}</td>
                 <td>{r.infoCelula.EVG}</td>
                 <td>{r.infoCelula.Ofrenda}</td>
+                <td>
+                  {r.estadoComite === "CONFIRMADO" && (
+                    <span style={{ color: "green" }}>
+                      ✔ Confirmado
+                    </span>
+                  )}
+
+                  {r.estadoComite === "RECHAZADO" && (
+                    <span style={{ color: "red" }}>
+                      ✖ Rechazado
+                    </span>
+                  )}
+
+                  {r.estadoComite === "PENDIENTE" && (
+                    <span style={{ color: "#6b7280" }}>
+                      ⏳ Pendiente comité
+                    </span>
+                  )}
+                </td>
+
               </tr>
             ))}
 
