@@ -21,11 +21,6 @@ const RedSchema = new mongoose.Schema(
 
 const SectorSchema = new mongoose.Schema(
   {
-    sector: {
-      type: Number,
-      required: true,
-      unique: true
-    },
     supervisor: {
       type: String,
       required: true
@@ -35,12 +30,21 @@ const SectorSchema = new mongoose.Schema(
       enum: ["Adulto", "Juvenil", "Infantil"],
       required: true
     },
+    sector: {
+      type: Number,
+      required: true
+    },
     redes: {
       type: [RedSchema],
       default: []
     }
   },
   { timestamps: true }
+);
+// Indice Unico para sector + tipoSupervisor
+SectorSchema.index(
+  { sector: 1, tipoSupervisor: 1 },
+  { unique: true }
 );
 
 module.exports = mongoose.model("Sector", SectorSchema);
