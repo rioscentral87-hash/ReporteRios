@@ -9,7 +9,7 @@ export default function VistaPastor({ onLogout }) {
 
   return (
     <SupervisorLayout
-      supervisor={{ nombre: "Pastor General", sector: "Todos" }}
+      supervisor={{ nombre: "Pastor Orlando Martinez", sector: "Todos" }}
       onLogout={onLogout}
     >
       {/* BOTONES */}
