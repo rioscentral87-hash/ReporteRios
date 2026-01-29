@@ -66,7 +66,7 @@ export default function SupervisorHome({
   );
 }
 
-/* 🎨 ESTILOS */
+/*  ESTILOS */
 const styles = {
   cards: {
     display: "grid",
