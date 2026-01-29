@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import TablaRedes from "../TablaRedes";
 import api from "../../services/api";
 
@@ -11,6 +11,23 @@ export default function CrearReporte({
   const [fecha, setFecha] = useState("");
   const [filas, setFilas] = useState([]);
 
+  /* =========================
+      SINCRONIZAR FECHA
+  ========================== */
+  useEffect(() => {
+    if (filas.length > 0) {
+      setFilas(prev =>
+        prev.map(f => ({
+          ...f,
+          fecha
+        }))
+      );
+    }
+  }, [fecha]);
+
+  /* =========================
+      CREAR FILAS
+  ========================== */
   const crearReporte = () => {
     if (!fecha) {
       alert("Seleccione una fecha");
@@ -18,36 +35,73 @@ export default function CrearReporte({
     }
 
     const nuevasFilas = (Array.isArray(redes) ? redes : []).map(r => ({
-        fecha,
-        sector: sectorNumero,
-        supervisor: supervisorNombre, // ✅ AQUÍ ESTÁ LA CLAVE
-        red: r.numero,
-        lider: r.lider,
-        infoIglesia: {
-            martes: 0,
-            jueves: 0,
-            domingo: 0
-        },
-        infoCelula: {
-            HNO: 0,
-            INV: 0,
-            TOT: 0,
-            REC: 0,
-            Conv: 0,
-            VP: 0,
-            BA: 0,
-            EVG: 0,
-            Ofrenda: 0
-        }
-        }));
-
+      fecha,
+      sector: sectorNumero,
+      supervisor: supervisorNombre,
+      red: r.numero,
+      lider: r.lider,
+      infoIglesia: {
+        martes: "",
+        jueves: "",
+        domingo: ""
+      },
+      infoCelula: {
+        HNO: "",
+        INV: "",
+        TOT: "",
+        REC: "",
+        Conv: "",
+        VP: "",
+        BA: "",
+        EVG: "",
+        Ofrenda: ""
+      }
+    }));
 
     setFilas(nuevasFilas);
   };
 
+  /* =========================
+     LIMPIAR VACÍOS → 0
+  ========================== */
+  const limpiarNumeros = obj => {
+    const limpio = {};
+    for (const k in obj) {
+      limpio[k] = obj[k] === "" ? 0 : Number(obj[k]);
+    }
+    return limpio;
+  };
+
+  /* =========================
+      GUARDAR (VALIDACIÓN REAL)
+  ========================== */
   const guardarReporte = async () => {
     try {
-      await api.post("/reportes", filas);
+      if (filas.length === 0) return;
+
+      const fechaReal = filas[0].fecha;
+
+      const res = await api.get(`/reportes/sector/${sectorNumero}`);
+
+      const existeFecha = res.data.some(
+        r => r.fecha === fechaReal
+      );
+
+      if (existeFecha) {
+        alert(
+          `❌ Ya existe un reporte para el sector ${sectorNumero} en la fecha ${fechaReal}`
+        );
+        return;
+      }
+
+      const datosFinales = filas.map(f => ({
+        ...f,
+        infoIglesia: limpiarNumeros(f.infoIglesia),
+        infoCelula: limpiarNumeros(f.infoCelula)
+      }));
+
+      await api.post("/reportes", datosFinales);
+
       alert("Reporte guardado correctamente");
       setFecha("");
       setFilas([]);
