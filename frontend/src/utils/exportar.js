@@ -25,7 +25,8 @@ export function exportarExcel(filas, nombre) {
     VP: r.infoCelula.VP,
     BA: r.infoCelula.BA,
     EVG: r.infoCelula.EVG,
-    Ofrenda: r.infoCelula.Ofrenda
+    Ofrenda: r.infoCelula.Ofrenda,
+    RevisiónComité: r.estadoComite
   }));
 
   const hoja = XLSX.utils.json_to_sheet([]);
