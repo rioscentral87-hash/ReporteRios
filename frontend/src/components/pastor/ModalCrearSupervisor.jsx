@@ -5,7 +5,6 @@ export default function ModalCrearSupervisor({ onClose, onCreado }) {
   const [sector, setSector] = useState("");
   const [supervisor, setSupervisor] = useState("");
   const [tipoSupervisor, setTipoSupervisor] = useState("Adulto");
-  const [password, setPassword] = useState("");
   const [redes, setRedes] = useState([]);
 
   const agregarRed = () => {
@@ -19,8 +18,13 @@ export default function ModalCrearSupervisor({ onClose, onCreado }) {
   };
 
   const guardar = async () => {
-    if (!sector || !supervisor || !password) {
-      alert("Complete todos los datos");
+    if (!sector || !supervisor || !tipoSupervisor) {
+      alert("⚠️ Complete todos los datos del supervisor");
+      return;
+    }
+
+    if (isNaN(sector) || Number(sector) <= 0) {
+      alert("⚠️ El sector debe ser un número válido");
       return;
     }
 
@@ -29,16 +33,20 @@ export default function ModalCrearSupervisor({ onClose, onCreado }) {
         sector: Number(sector),
         supervisor,
         tipoSupervisor,
-        redes,
-        password
+        redes
       });
-      console.log("estamos en el try de crear supervisor");
+
       alert("✅ Supervisor creado correctamente");
       onCreado();
       onClose();
     } catch (e) {
-      console.log(e);
-      alert("❌ Error creando supervisor");
+      console.error(e);
+
+      if (e.response?.data?.message) {
+        alert(`❌ ${e.response.data.message}`);
+      } else {
+        alert("❌ Error creando supervisor");
+      }
     }
   };
 
@@ -47,14 +55,17 @@ export default function ModalCrearSupervisor({ onClose, onCreado }) {
       <div style={styles.modal}>
         <h3>➕ Crear Supervisor</h3>
 
+        {/* SECTOR */}
         <input
           placeholder="Número de sector"
           type="number"
+          min={1}
           value={sector}
           onChange={e => setSector(e.target.value)}
           style={styles.input}
         />
 
+        {/* NOMBRE SUPERVISOR */}
         <input
           placeholder="Nombre del supervisor"
           value={supervisor}
@@ -62,49 +73,48 @@ export default function ModalCrearSupervisor({ onClose, onCreado }) {
           style={styles.input}
         />
 
+        {/* TIPO SUPERVISOR */}
         <select
           value={tipoSupervisor}
           onChange={e => setTipoSupervisor(e.target.value)}
           style={styles.input}
         >
-          <option>Adulto</option>
-          <option>Juvenil</option>
-          <option>Infantil</option>
+          <option value="Adulto">Adulto</option>
+          <option value="Juvenil">Juvenil</option>
+          <option value="Infantil">Infantil</option>
         </select>
-
-        <input
-          placeholder="Contraseña del supervisor"
-          type="password"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          style={styles.input}
-        />
 
         <h4>Redes</h4>
 
         {redes.map((r, i) => (
-          <div key={i} style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+          <div
+            key={i}
+            style={{ display: "flex", gap: 8, marginBottom: 6 }}
+          >
             <input
               placeholder="Red"
               type="number"
+              min={1}
               value={r.numero}
               onChange={e => cambiarRed(i, "numero", e.target.value)}
               style={styles.input}
             />
+
             <input
               placeholder="Líder"
               value={r.lider}
               onChange={e => cambiarRed(i, "lider", e.target.value)}
               style={styles.input}
             />
+
             <select
               value={r.tipo}
               onChange={e => cambiarRed(i, "tipo", e.target.value)}
               style={styles.input}
             >
-              <option>Adulto</option>
-              <option>Juvenil</option>
-              <option>Infantil</option>
+              <option value="Adulto">Adulto</option>
+              <option value="Juvenil">Juvenil</option>
+              <option value="Infantil">Infantil</option>
             </select>
           </div>
         ))}
@@ -126,7 +136,7 @@ export default function ModalCrearSupervisor({ onClose, onCreado }) {
   );
 }
 
-/* 🎨 estilos simples de modal */
+/* 🎨 ESTILOS */
 const styles = {
   overlay: {
     position: "fixed",
@@ -143,21 +153,24 @@ const styles = {
     borderRadius: 14,
     width: 420,
     maxHeight: "90vh",
-    overflowY: "auto"
+    overflowY: "auto",
+    boxSizing: "border-box"
   },
   input: {
     width: "100%",
     padding: 8,
     marginBottom: 8,
     borderRadius: 6,
-    border: "1px solid #ccc"
+    border: "1px solid #ccc",
+    boxSizing: "border-box"
   },
   add: {
     background: "#E5E7EB",
     padding: "8px 14px",
     borderRadius: 8,
     border: "none",
-    cursor: "pointer"
+    cursor: "pointer",
+    marginBottom: 10
   },
   save: {
     background: "#16a34a",
@@ -165,12 +178,14 @@ const styles = {
     padding: "10px 16px",
     borderRadius: 10,
     border: "none",
-    marginRight: 10
+    marginRight: 10,
+    cursor: "pointer"
   },
   cancel: {
     background: "#F4C430",
     padding: "10px 16px",
     borderRadius: 10,
-    border: "none"
+    border: "none",
+    cursor: "pointer"
   }
 };
