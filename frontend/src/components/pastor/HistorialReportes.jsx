@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../../services/api";
 import { exportarExcel, exportarPDF } from "../../utils/exportar";
+import supervisorLayout from "../supervisor/SupervisorLayout";
 
 export default function HistorialReportes() {
   const [reportes, setReportes] = useState([]);
@@ -9,7 +10,11 @@ export default function HistorialReportes() {
 
   const [sectorSel, setSectorSel] = useState("");
   const [supervisorSel, setSupervisorSel] = useState("");
+  const [semanaSel, setSemanaSel] = useState(null); // 🆕 TOGGLE SEMANA
 
+  /* =========================
+     CARGA INICIAL
+  ========================= */
   useEffect(() => {
     cargar();
   }, []);
@@ -25,7 +30,9 @@ export default function HistorialReportes() {
     setSectores(secRes.data || []);
   };
 
-  /* 🔗 SECTOR → SOLO MUESTRA SUPERVISOR (NO FILTRA) */
+  /* =========================
+     FILTRO SECTOR → SOLO UI
+  ========================= */
   const cambiarSector = value => {
     setSectorSel(value);
 
@@ -38,7 +45,9 @@ export default function HistorialReportes() {
     setSupervisorSel(sec ? sec.supervisor : "");
   };
 
-  /* 🔗 SUPERVISOR → SOLO FILTRA SI SE USA SOLO */
+  /* =========================
+     FILTRO SUPERVISOR → SOLO UI
+  ========================= */
   const cambiarSupervisor = value => {
     setSupervisorSel(value);
 
@@ -51,23 +60,55 @@ export default function HistorialReportes() {
     setSectorSel(sec ? sec.sector : "");
   };
 
-  /* 🔍 APLICAR FILTROS (CORREGIDO) */
-  const aplicarFiltros = () => {
+  /* =========================
+     TOGGLE SEMANA
+  ========================= */
+  const toggleSemana = semana => {
+    setSemanaSel(prev => (prev === semana ? null : semana));
+  };
+
+  /* =========================
+     APLICAR FILTROS AUTOMÁTICO
+  ========================= */
+  useEffect(() => {
     let datos = [...reportes];
 
     if (sectorSel) {
       datos = datos.filter(r => r.sector === Number(sectorSel));
     }
 
-    // ⚠️ SOLO filtrar por supervisor si NO hay sector seleccionado
+    // solo filtrar supervisor si NO hay sector
     if (supervisorSel && !sectorSel) {
       datos = datos.filter(r => r.supervisor === supervisorSel);
     }
 
+    if (semanaSel) {
+      datos = datos.filter(r => r.semana === semanaSel);
+    }
+
     setFiltrados(datos);
+  }, [sectorSel, supervisorSel, semanaSel, reportes]);
+
+  /* =========================
+     LIMPIAR FILTROS
+  ========================= */
+  const limpiarFiltros = () => {
+    setSectorSel("");
+    setSupervisorSel("");
+    setSemanaSel(null);
+    setFiltrados(reportes);
   };
 
-  /* 🔢 TOTALES SEGÚN FILTRO */
+  /* =========================
+     LISTA DE SEMANAS ÚNICAS
+  ========================= */
+  const semanas = [...new Set(reportes.map(r => r.semana))].sort(
+    (a, b) => a - b
+  );
+
+  /* =========================
+     TOTALES
+  ========================= */
   const totales = filtrados.reduce(
     (t, r) => {
       t.martes += r.infoIglesia.martes;
@@ -103,10 +144,11 @@ export default function HistorialReportes() {
   );
 
   return (
+    
     <div>
       <h2>📜 Historial de Reportes</h2>
 
-      {/* FILTROS */}
+      {/* ================= FILTROS ================= */}
       <div style={styles.filtros}>
         <select
           value={sectorSel}
@@ -134,23 +176,33 @@ export default function HistorialReportes() {
           ))}
         </select>
 
-        <button style={styles.button} onClick={aplicarFiltros}>
-          Filtrar
-        </button>
-
-        <button
-          style={styles.clear}
-          onClick={() => {
-            setFiltrados(reportes);
-            setSectorSel("");
-            setSupervisorSel("");
-          }}
-        >
-          Limpiar
+        <button style={styles.clear} onClick={limpiarFiltros}>
+          Limpiar filtros
         </button>
       </div>
 
-      {/* EXPORTAR */}
+      {/* ================= FILTRO SEMANAS ================= */}
+      <div style={{ display: "flex", gap: 10, marginBottom: 15, flexWrap: "wrap" }}>
+        {semanas.map(s => (
+          <button
+            key={s}
+            onClick={() => toggleSemana(s)}
+            style={{
+              padding: "6px 14px",
+              borderRadius: 8,
+              border: "none",
+              fontWeight: "bold",
+              cursor: "pointer",
+              background: semanaSel === s ? "#0B5C9E" : "#E5E7EB",
+              color: semanaSel === s ? "#fff" : "#000"
+            }}
+          >
+            Semana {s}
+          </button>
+        ))}
+      </div>
+
+      {/* ================= EXPORTAR ================= */}
       <div style={{ display: "flex", gap: 12, marginBottom: 15 }}>
         <button onClick={() => exportarExcel(filtrados, "Historial_Pastor")}>
           📗 Excel
@@ -162,7 +214,7 @@ export default function HistorialReportes() {
               [
                 "Semana","Sector","Supervisor","Red","Líder",
                 "Mar","Jue","Dom",
-                "HNO","INV","TOT","REC","Conv","VP","BA","EVG","Ofrenda"
+                "HNO","INV","TOT","REC","Conv","VP","BA","EVG","Ofrenda","Revision Comité"
               ],
               [
                 ...filtrados.map(r => [
@@ -182,7 +234,8 @@ export default function HistorialReportes() {
                   r.infoCelula.VP,
                   r.infoCelula.BA,
                   r.infoCelula.EVG,
-                  r.infoCelula.Ofrenda
+                  r.infoCelula.Ofrenda,
+                  r.estadoComite
                 ]),
                 [
                   "TOTALES","","","","",
@@ -208,7 +261,7 @@ export default function HistorialReportes() {
         </button>
       </div>
 
-      {/* TABLA */}
+      {/* ================= TABLA ================= */}
       <div style={{ overflowX: "auto" }}>
         <table style={styles.table}>
           <thead>
@@ -230,6 +283,7 @@ export default function HistorialReportes() {
               <th>BA</th>
               <th>EVG</th>
               <th>Ofrenda</th>
+              <th>Revisión Comité</th>
             </tr>
           </thead>
 
@@ -253,6 +307,25 @@ export default function HistorialReportes() {
                 <td>{r.infoCelula.BA}</td>
                 <td>{r.infoCelula.EVG}</td>
                 <td>{r.infoCelula.Ofrenda}</td>
+                <td>
+                  {r.estadoComite === "CONFIRMADO" && (
+                    <span style={{ color: "green" }}>
+                      ✔ Confirmado
+                    </span>
+                  )}
+
+                  {r.estadoComite === "RECHAZADO" && (
+                    <span style={{ color: "red" }}>
+                      ✖ Rechazado
+                    </span>
+                  )}
+
+                  {r.estadoComite === "PENDIENTE" && (
+                    <span style={{ color: "#6b7280" }}>
+                      ⏳ Pendiente
+                    </span>
+                  )}
+                </td>
               </tr>
             ))}
 
