@@ -43,7 +43,28 @@ const ReporteSchema = new mongoose.Schema(
     supervisor: {
       type: String,
       required: true
+    }, // se acaba de agregar para validacion de ofrenda
+    estadoComite: {
+      type: String,
+      enum: ["PENDIENTE", "CONFIRMADO", "RECHAZADO"],
+      default: "PENDIENTE"
+    },
+
+    revisadoPorComite: {
+      type: Boolean,
+      default: false
+    },
+
+    /*  QUIÉN DEL COMITÉ REVISÓ */
+    comiteRevisor: {
+      type: String // nombre del miembro del comité
+    },
+
+    /*  FECHA DE REVISIÓN */
+    fechaRevisionComite: {
+      type: Date
     }
+
   },
   { timestamps: true }
 );
