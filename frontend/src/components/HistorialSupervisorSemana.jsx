@@ -12,7 +12,13 @@ export default function HistorialSupervisorSemana({ sector }) {
       .then(res => setReportes(res.data || []));
   }, [sector]);
 
-  /* 🗓️ SEMANAS DISPONIBLES */
+  /*  SEMANA ACTUAL */
+  const hoy = new Date();
+  const inicioAnio = new Date(hoy.getFullYear(), 0, 1);
+  const dias = Math.floor((hoy - inicioAnio) / (1000 * 60 * 60 * 24));
+  const semanaActual = Math.ceil((dias + inicioAnio.getDay() + 1) / 7);
+
+  /*  SEMANAS DISPONIBLES */
   const semanasDisponibles = [
     ...new Set(reportes.map(r => r.semana))
   ].sort((a, b) => a - b);
@@ -30,13 +36,27 @@ export default function HistorialSupervisorSemana({ sector }) {
     setSemanasSeleccionadas([]);
   };
 
-  /* 🔍 FILTRADO */
+  /*  FILTRADO */
   const reportesFiltrados =
     semanasSeleccionadas.length === 0
       ? reportes
       : reportes.filter(r => semanasSeleccionadas.includes(r.semana));
 
-  /* 🔢 TOTALES */
+  /*  ELIMINAR REPORTE */
+  const eliminarReporte = async id => {
+    if (!window.confirm("¿Seguro que deseas eliminar este reporte?")) return;
+
+    try {
+      await api.delete(`/reportes/${id}`);
+
+      setReportes(prev => prev.filter(r => r._id !== id));
+    } catch (error) {
+      console.error(error);
+      alert("❌ Error eliminando reporte");
+    }
+  };
+
+  /*  TOTALES */
   const totales = reportesFiltrados.reduce(
     (t, r) => {
       t.martes += r.infoIglesia.martes;
@@ -131,7 +151,8 @@ export default function HistorialSupervisorSemana({ sector }) {
                 "VP",
                 "BA",
                 "EVG",
-                "Ofrenda"
+                "Ofrenda",
+                "Revisión Comité"
               ],
               [
                 ...reportesFiltrados.map(r => [
@@ -150,7 +171,8 @@ export default function HistorialSupervisorSemana({ sector }) {
                   r.infoCelula.VP,
                   r.infoCelula.BA,
                   r.infoCelula.EVG,
-                  r.infoCelula.Ofrenda
+                  r.infoCelula.Ofrenda,
+                  r.estadoComite
                 ]),
                 [
                   "TOTALES",
@@ -201,6 +223,8 @@ export default function HistorialSupervisorSemana({ sector }) {
               <th>BA</th>
               <th>EVG</th>
               <th>Ofrenda</th>
+              <th>Revisión Comité</th>
+              <th></th>
             </tr>
           </thead>
 
@@ -223,6 +247,42 @@ export default function HistorialSupervisorSemana({ sector }) {
                 <td>{r.infoCelula.BA}</td>
                 <td>{r.infoCelula.EVG}</td>
                 <td>{r.infoCelula.Ofrenda}</td>
+                <td>
+                  {r.estadoComite === "CONFIRMADO" && (
+                    <span style={{ color: "green" }}>
+                      ✔ Confirmado
+                    </span>
+                  )}
+
+                  {r.estadoComite === "RECHAZADO" && (
+                    <span style={{ color: "red" }}>
+                      ✖ Rechazado
+                    </span>
+                  )}
+
+                  {r.estadoComite === "PENDIENTE" && (
+                    <span style={{ color: "#6b7280" }}>
+                      ⏳ Pendiente
+                    </span>
+                  )}
+                </td>
+
+                {/*  SOLO SEMANA ACTUAL */}
+                <td>
+                  {r.semana === semanaActual-1 && (
+                    <button
+                      onClick={() => eliminarReporte(r._id)}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        cursor: "pointer",
+                        fontSize: 16
+                      }}
+                    >
+                      🗑️
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
 
@@ -240,6 +300,7 @@ export default function HistorialSupervisorSemana({ sector }) {
               <td>{totales.BA}</td>
               <td>{totales.EVG}</td>
               <td>{totales.Ofrenda}</td>
+              <td></td>
             </tr>
           </tbody>
         </table>
@@ -248,7 +309,7 @@ export default function HistorialSupervisorSemana({ sector }) {
   );
 }
 
-/* 🎨 ESTILOS */
+/*  ESTILOS (SIN CAMBIOS) */
 const styles = {
   filtroBox: {
     marginBottom: 15
