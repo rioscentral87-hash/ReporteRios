@@ -1,16 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import api from "../../services/api";
 
 export default function ModalCrearUsuario({ onClose }) {
   const [nombre, setNombre] = useState("");
   const [password, setPassword] = useState("");
   const [rol, setRol] = useState("SUPERVISOR");
-  const [sector, setSector] = useState("");
-  const [sectores, setSectores] = useState([]);
 
-  useEffect(() => {
-    api.get("/sectores").then(res => setSectores(res.data || []));
-  }, []);
+  const [sector, setSector] = useState("");
+  const [tipoSupervisor, setTipoSupervisor] = useState("");
 
   const guardar = async () => {
     if (!nombre || !password || !rol) {
@@ -18,18 +15,37 @@ export default function ModalCrearUsuario({ onClose }) {
       return;
     }
 
+    if (rol === "SUPERVISOR") {
+      if (!sector || !tipoSupervisor) {
+        alert("⚠️ Ingrese sector y tipo de supervisor");
+        return;
+      }
+
+      if (isNaN(sector) || Number(sector) <= 0) {
+        alert("⚠️ El sector debe ser un número válido");
+        return;
+      }
+    }
+
     try {
       await api.post("/auth/crear-usuario", {
         nombre,
         password,
         rol,
-        sector: rol === "SUPERVISOR" ? Number(sector) : null
+        sector: rol === "SUPERVISOR" ? Number(sector) : null,
+        tipoSupervisor: rol === "SUPERVISOR" ? tipoSupervisor : null
       });
 
       alert("✅ Usuario creado correctamente");
       onClose();
     } catch (e) {
-      alert("❌ Error creando usuario");
+      console.error(e);
+
+      if (e.response?.data?.message) {
+        alert(`❌ ${e.response.data.message}`);
+      } else {
+        alert("❌ Error creando usuario");
+      }
     }
   };
 
@@ -38,13 +54,15 @@ export default function ModalCrearUsuario({ onClose }) {
       <div style={styles.modal}>
         <h3>👤 Crear Usuario</h3>
 
+        {/* NOMBRE */}
         <input
-          placeholder="Nombre"
+          placeholder="Nombre completo"
           value={nombre}
           onChange={e => setNombre(e.target.value)}
           style={styles.input}
         />
 
+        {/* PASSWORD */}
         <input
           type="password"
           placeholder="Contraseña"
@@ -53,40 +71,62 @@ export default function ModalCrearUsuario({ onClose }) {
           style={styles.input}
         />
 
+        {/* ROL */}
         <select
           value={rol}
-          onChange={e => setRol(e.target.value)}
+          onChange={e => {
+            setRol(e.target.value);
+            setSector("");
+            setTipoSupervisor("");
+          }}
           style={styles.input}
         >
           <option value="SUPERVISOR">Supervisor</option>
           <option value="PASTOR">Pastor</option>
         </select>
 
+        {/* SOLO PARA SUPERVISOR */}
         {rol === "SUPERVISOR" && (
-          <select
-            value={sector}
-            onChange={e => setSector(e.target.value)}
-            style={styles.input}
-          >
-            <option value="">Seleccione Sector</option>
-            {sectores.map(s => (
-              <option key={s._id} value={s.sector}>
-                Sector {s.sector} - {s.supervisor}
-              </option>
-            ))}
-          </select>
+          <>
+            {/* SECTOR MANUAL */}
+            <input
+              type="number"
+              placeholder="Número de Sector (ej: 1)"
+              value={sector}
+              onChange={e => setSector(e.target.value)}
+              style={styles.input}
+              min={1}
+            />
+
+            {/* TIPO SUPERVISOR */}
+            <select
+              value={tipoSupervisor}
+              onChange={e => setTipoSupervisor(e.target.value)}
+              style={styles.input}
+            >
+              <option value="">Tipo de Supervisor</option>
+              <option value="Adulto">Adulto</option>
+              <option value="Juvenil">Juvenil</option>
+              <option value="Infantil">Infantil</option>
+            </select>
+          </>
         )}
 
-        <div style={{ marginTop: 20 }}>
-          <button style={styles.save} onClick={guardar}>💾 Guardar</button>
-          <button style={styles.cancel} onClick={onClose}>❌ Cancelar</button>
+        {/* BOTONES */}
+        <div style={{ marginTop: 20, textAlign: "right" }}>
+          <button style={styles.save} onClick={guardar}>
+            💾 Guardar
+          </button>
+          <button style={styles.cancel} onClick={onClose}>
+            ❌ Cancelar
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-/* ESTILOS SOLO DEL MODAL */
+/* ===== ESTILOS ===== */
 const styles = {
   overlay: {
     position: "fixed",
@@ -101,14 +141,16 @@ const styles = {
     background: "#fff",
     padding: 25,
     borderRadius: 12,
-    width: 360
+    width: 360,
+    boxSizing: "border-box"
   },
   input: {
     width: "100%",
-    padding: 8,
+    padding: 10,
     marginTop: 10,
     borderRadius: 6,
-    border: "1px solid #ccc"
+    border: "1px solid #ccc",
+    boxSizing: "border-box"
   },
   save: {
     background: "#16a34a",
@@ -116,12 +158,14 @@ const styles = {
     padding: "10px 16px",
     borderRadius: 8,
     border: "none",
-    marginRight: 10
+    marginRight: 10,
+    cursor: "pointer"
   },
   cancel: {
     background: "#F4C430",
     padding: "10px 16px",
     borderRadius: 8,
-    border: "none"
+    border: "none",
+    cursor: "pointer"
   }
 };
