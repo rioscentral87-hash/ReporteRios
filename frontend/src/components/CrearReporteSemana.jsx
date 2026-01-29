@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import api from "../services/api";
 import { exportarExcel, exportarPDF } from "../utils/exportar";
 
@@ -10,45 +10,100 @@ export default function CrearReporteSemana({ usuario, redes, volver }) {
   const semanas = Array.from({ length: 52 }, (_, i) => i + 1);
 
   /* =========================
-     ➕ CREAR FILAS (VACÍAS)
+      SEMANA ACTUAL REAL
   ========================== */
-  const crear = () => {
+  const obtenerSemanaActual = () => {
+    const hoy = new Date();
+    const inicioAnio = new Date(hoy.getFullYear(), 0, 1);
+    const dias = Math.floor((hoy - inicioAnio) / (24 * 60 * 60 * 1000));
+    return Math.ceil((dias + inicioAnio.getDay() + 1) / 7);
+  };
+
+  const semanaActual = obtenerSemanaActual();
+
+  /* =========================
+      SINCRONIZAR SEMANA/ANIO
+  ========================== */
+  useEffect(() => {
+    if (filas.length > 0) {
+      setFilas(prev =>
+        prev.map(f => ({
+          ...f,
+          anio,
+          semana: Number(semana)
+        }))
+      );
+    }
+  }, [semana, anio]);
+
+  /* =========================
+      CREAR SOLO LÍDERES FALTANTES
+  ========================== */
+  const crear = async () => {
     if (!semana) {
       alert("Seleccione una semana");
       return;
     }
 
-    setFilas(
-      redes.map(r => ({
-        anio,
-        semana: Number(semana),
-        sector: usuario.sector,
-        supervisor: usuario.nombre,
-        red: r.numero,
-        lider: r.lider,
-        tipoRed: r.tipo || "Adulto",
-        infoIglesia: {
-          martes: "",
-          jueves: "",
-          domingo: ""
-        },
-        infoCelula: {
-          HNO: "",
-          INV: "",
-          TOT: "",
-          REC: "",
-          Conv: "",
-          VP: "",
-          BA: "",
-          EVG: "",
-          Ofrenda: ""
-        }
-      }))
-    );
+    if (Number(semana) > semanaActual) {
+      alert("⚠️ No puede crear reportes para semanas futuras");
+      return;
+    }
+
+    try {
+      const res = await api.get(`/reportes/sector/${usuario.sector}`);
+
+      const existentes = res.data.filter(
+        r => r.anio === anio && r.semana === Number(semana)
+      );
+
+      const lideresConReporte = existentes.map(r => r.lider);
+
+      const redesFaltantes = redes.filter(
+        r => !lideresConReporte.includes(r.lider)
+      );
+
+      if (redesFaltantes.length === 0) {
+        alert("✅ Todos los líderes ya tienen reporte para esta semana");
+        setFilas([]);
+        return;
+      }
+
+      setFilas(
+        redesFaltantes.map(r => ({
+          anio,
+          semana: Number(semana),
+          sector: usuario.sector,
+          supervisor: usuario.nombre,
+          red: r.numero,
+          lider: r.lider,
+          tipoRed: r.tipo || "Adulto",
+          infoIglesia: {
+            martes: "",
+            jueves: "",
+            domingo: ""
+          },
+          infoCelula: {
+            HNO: "",
+            INV: "",
+            TOT: "",
+            REC: "",
+            Conv: "",
+            VP: "",
+            BA: "",
+            EVG: "",
+            Ofrenda: ""
+          }
+        }))
+      );
+    } catch (error) {
+      console.error(error);
+      alert("Error verificando reportes existentes");
+    }
   };
 
   /* =========================
-     🔄 CAMBIOS + AUTO-TOT
+      CAMBIOS + AUTO-TOT
   ========================== */
   const cambiar = (i, grupo, campo, valor) => {
     const copia = [...filas];
@@ -71,7 +126,7 @@ export default function CrearReporteSemana({ usuario, redes, volver }) {
   };
 
   /* =========================
-     🔁 LIMPIAR VACÍOS → 0
+      LIMPIAR VACÍOS → 0
   ========================== */
   const limpiarNumeros = obj => {
     const limpio = {};
@@ -82,23 +137,11 @@ export default function CrearReporteSemana({ usuario, redes, volver }) {
   };
 
   /* =========================
-     💾 GUARDAR (VALIDACIÓN REAL)
+      GUARDAR (POR LÍDER)
   ========================== */
   const guardar = async () => {
     try {
-      const res = await api.get(`/reportes/sector/${usuario.sector}`);
-
-      // ✅ VALIDACIÓN CORRECTA
-      const existeSemana = res.data.some(
-        r => r.anio === anio && r.semana === Number(semana)
-      );
-
-      if (existeSemana) {
-        alert(
-          `❌ Ya existe un reporte para el sector ${usuario.sector} en la semana ${semana}`
-        );
-        return;
-      }
+      if (filas.length === 0) return;
 
       const datosFinales = filas.map(f => ({
         ...f,
@@ -107,7 +150,7 @@ export default function CrearReporteSemana({ usuario, redes, volver }) {
       }));
 
       await api.post("/reportes", datosFinales);
-      alert("✅ Reporte semanal guardado correctamente");
+      alert("✅ Reporte guardado correctamente");
       volver();
     } catch (error) {
       console.error(error);
@@ -116,7 +159,7 @@ export default function CrearReporteSemana({ usuario, redes, volver }) {
   };
 
   /* =========================
-     🔢 TOTALES
+      TOTALES
   ========================== */
   const totales = filas.reduce(
     (t, r) => {
@@ -164,10 +207,22 @@ export default function CrearReporteSemana({ usuario, redes, volver }) {
 
         <select value={semana} onChange={e => setSemana(e.target.value)}>
           <option value="">Semana</option>
-          {semanas.map(s => (
-            <option key={s} value={s}>Semana {s}</option>
-          ))}
+          {semanas.map(s => {
+            const semanaPermitida = semanaActual - 1;
+            const habilitada = s === semanaPermitida;
+
+            return (
+              <option
+                key={s}
+                value={s}
+                disabled={!habilitada}
+              >
+                Semana {s} {!habilitada ? "⛔" : ""}
+              </option>
+            );
+          })}
         </select>
+
 
         <button onClick={crear}>Crear Reporte</button>
       </div>
