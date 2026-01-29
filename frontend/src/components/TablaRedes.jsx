@@ -24,6 +24,7 @@ export default function TablaRedes({ filas, setFilas }) {
           <th>BA</th>
           <th>EVG</th>
           <th>Ofrenda</th>
+          <th>Revisión Comité</th>
         </tr>
       </thead>
 
@@ -45,7 +46,9 @@ export default function TablaRedes({ filas, setFilas }) {
                   onChange={e => cambiar(i,"infoCelula",c,e.target.value)}
                 />
               </td>
+            
             ))}
+            <td>{f.estadoComite}</td>
           </tr>
         ))}
       </tbody>
