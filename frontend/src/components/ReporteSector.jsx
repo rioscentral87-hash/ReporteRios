@@ -7,18 +7,32 @@ import HistorialSupervisorSemana from "./HistorialSupervisorSemana";
 export default function ReporteSector({ usuario, onLogout }) {
   const [sectorInfo, setSectorInfo] = useState(null);
   const [vista, setVista] = useState("INICIO"); // INICIO | CREAR | HISTORIAL
+  const [error, setError] = useState("");
 
   useEffect(() => {
+    if (!usuario) return;
+
+    console.log("Prueba de usuario logeado:", usuario);
+
+    setError("");
+
     api
-      .get(`/sectores/${usuario.sector}`)
+      .get(`/sectores/${usuario.sector}`, {
+        params: {
+          tipoSupervisor: usuario.tipoSupervisor
+        }
+      })
       .then(res => setSectorInfo(res.data))
-      .catch(() => alert("Error cargando sector"));
-  }, [usuario.sector]);
+      .catch(err => {
+        console.error("Error cargando sector:", err.response?.data);
+        setError("Error cargando sector");
+      });
+  }, [usuario.sector, usuario.tipoSupervisor]);
 
   if (!sectorInfo) {
     return (
       <SupervisorLayout onLogout={onLogout} supervisor={usuario}>
-        <p>Cargando información del sector...</p>
+        <p>{error || "Cargando información del sector..."}</p>
       </SupervisorLayout>
     );
   }
@@ -33,11 +47,9 @@ export default function ReporteSector({ usuario, onLogout }) {
         </div>
 
         <div style={styles.card}>
-          <h3>Supervisor</h3>
+          <h3>Facilitador</h3>
           <span style={styles.texto}>{sectorInfo.supervisor}</span>
-          <small style={styles.tipo}>
-            {sectorInfo.tipoSupervisor || "Adulto"}
-          </small>
+          <small style={styles.tipo}>{sectorInfo.tipoSupervisor}</small>
         </div>
 
         <div style={styles.card}>
@@ -84,7 +96,7 @@ export default function ReporteSector({ usuario, onLogout }) {
                     <tr key={r.numero}>
                       <td>{r.numero}</td>
                       <td>{r.lider}</td>
-                      <td>{r.tipo || "Adulto"}</td>
+                      <td>{r.tipo}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -105,7 +117,10 @@ export default function ReporteSector({ usuario, onLogout }) {
         {/* -------- HISTORIAL -------- */}
         {vista === "HISTORIAL" && (
           <>
-            <HistorialSupervisorSemana sector={usuario.sector} />
+            <HistorialSupervisorSemana
+              sector={usuario.sector}
+              tipoSupervisor={usuario.tipoSupervisor}
+            />
 
             <div style={{ marginTop: 25, textAlign: "center" }}>
               <button
