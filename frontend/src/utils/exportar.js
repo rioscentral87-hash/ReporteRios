@@ -3,7 +3,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 /* 🏛️ CONFIGURACIÓN IGLESIA */
-const NOMBRE_IGLESIA = "Iglesia Central Ríos de Agua Vida";
+const NOMBRE_IGLESIA = "Iglesia Central Ríos de Agua Viva";
 const LOGO_URL = "/logo.png"; // debe estar en public/
 
 /* 🔹 EXPORTAR EXCEL */
@@ -105,4 +105,5 @@ function cargarImagen(src) {
     img.src = src;
   });
 }
+
 
