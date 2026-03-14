@@ -119,7 +119,7 @@ export default function ReporteSector({ usuario, onLogout }) {
           <>
             <HistorialSupervisorSemana
               sector={usuario.sector}
-              tipoSupervisor={usuario.tipoSupervisor}
+              supervisor={usuario.nombre}
             />
 
             <div style={{ marginTop: 25, textAlign: "center" }}>
