@@ -87,36 +87,80 @@ export default function ComiteReportes({ usuario, onLogout }) {
   const sectoresSemana = useMemo(() => {
     const map = new Map();
     reportes.forEach(r => {
-      map.set(r.sector, r.supervisor);
+      const key = `${r.sector}-${r.supervisor}`;
+      map.set(key, r);
     });
-    return Array.from(map.entries());
+    return Array.from(map.values());
   }, [reportes]);
 
   const sectoresHistorial = useMemo(() => {
     const map = new Map();
     historial.forEach(r => {
-      map.set(r.sector, r.supervisor);
+      const key = `${r.sector}-${r.supervisor}`;
+      map.set(key, r);
     });
-    return Array.from(map.entries());
+    return Array.from(map.values());
   }, [historial]);
 
   /* ============================
      FILTRADOS
   ============================ */
-  const reportesSemanaFiltrados = reportes.filter(r =>
-    sectorSemanaSel ? r.sector === Number(sectorSemanaSel) : true
-  );
+  const reportesSemanaFiltrados = reportes.filter(r => {
+    if (!sectorSemanaSel) return true;
+
+    const [sector, supervisor] = sectorSemanaSel.split("|");
+    return r.sector === Number(sector) && r.supervisor === supervisor;
+  });
 
   const historialFiltrado = historial.filter(r => {
-    if (sectorHistSel && r.sector !== Number(sectorHistSel)) return false;
+    if (sectorHistSel) {
+      const [sector, supervisor] = sectorHistSel.split("|");
+      if (r.sector !== Number(sector) || r.supervisor !== supervisor) return false;
+    }
+
     if (semanaHistSel && r.semana !== semanaHistSel) return false;
+
     return true;
   });
 
-  const semanasHistorial = [
-    ...new Set(historial.map(r => r.semana))
-  ].sort((a, b) => b - a);
+  const semanasHistorial = [...new Set(historial.map(r => r.semana))].sort((a, b) => b - a);
 
+  /* ============================
+     HISTORIAL AGRUPADO POR FACILITADOR + SEMANA
+  ============================ */
+  const historialAgrupado = useMemo(() => {
+    const map = new Map();
+
+    historialFiltrado.forEach(r => {
+      const key = `${r.semana}-${r.supervisor}`;
+      const prev = map.get(key);
+
+      if (prev) {
+        prev.ofrenda += r.infoCelula?.Ofrenda || 0;
+        // Mantener estado y revisor si no existe
+        if (!prev.estadoComite && r.estadoComite) prev.estadoComite = r.estadoComite;
+        if (!prev.comiteRevisor && r.comiteRevisor) prev.comiteRevisor = r.comiteRevisor;
+      } else {
+        map.set(key, {
+          _id: key,
+          semana: r.semana,
+          sector: r.sector,
+          supervisor: r.supervisor,
+          ofrenda: r.infoCelula?.Ofrenda || 0,
+          estadoComite: r.estadoComite,
+          comiteRevisor: r.comiteRevisor
+        });
+      }
+    });
+
+    return Array.from(map.values());
+  }, [historialFiltrado]);
+
+  const totalOfrendaHistorial = historialAgrupado.reduce((total, r) => total + r.ofrenda, 0);
+
+  /* ============================
+     RENDER
+  ============================ */
   return (
     <SupervisorLayout supervisor={usuario} onLogout={onLogout}>
       {/* ===== TABS ===== */}
@@ -147,13 +191,13 @@ export default function ComiteReportes({ usuario, onLogout }) {
             onChange={e => setSectorSemanaSel(e.target.value)}
           >
             <option value="">Todos los sectores</option>
-            {sectoresSemana.map(([sector, supervisor]) => (
-              <option key={sector} value={sector}>
-                Sector {sector} — {supervisor}
+            {sectoresSemana.map(r => (
+              <option key={`${r.sector}-${r.supervisor}`} value={`${r.sector}|${r.supervisor}`}>
+                Sector {r.sector} — {r.supervisor}
               </option>
             ))}
           </select>
-          
+
           {reportesSemanaFiltrados.length === 0 ? (
             <p>No hay reportes pendientes</p>
           ) : (
@@ -220,30 +264,23 @@ export default function ComiteReportes({ usuario, onLogout }) {
               onChange={e => setSectorHistSel(e.target.value)}
             >
               <option value="">Todos los sectores</option>
-              {sectoresHistorial.map(([sector, supervisor]) => (
-                <option key={sector} value={sector}>
-                  Sector {sector} — {supervisor}
+              {sectoresHistorial.map(r => (
+                <option key={`${r.sector}-${r.supervisor}`} value={`${r.sector}|${r.supervisor}`}>
+                  Sector {r.sector} — {r.supervisor}
                 </option>
               ))}
             </select>
-            
+
             {semanasHistorial.map(s => (
               <button
                 key={s}
-                onClick={() =>
-                  setSemanaHistSel(semanaHistSel === s ? null : s)
-                }
-                style={
-                  semanaHistSel === s
-                    ? styles.toggleActive
-                    : styles.toggle
-                }
+                onClick={() => setSemanaHistSel(semanaHistSel === s ? null : s)}
+                style={semanaHistSel === s ? styles.toggleActive : styles.toggle}
               >
                 Semana {s}
               </button>
             ))}
           </div>
-          <tr></tr>
 
           <div style={{ overflowX: "auto" }}>
             <table style={styles.table}>
@@ -252,16 +289,18 @@ export default function ComiteReportes({ usuario, onLogout }) {
                   <th>Semana</th>
                   <th>Sector</th>
                   <th>Facilitador</th>
+                  <th>Ofrenda</th>
                   <th>Estado</th>
                   <th>Revisado por</th>
                 </tr>
               </thead>
               <tbody>
-                {historialFiltrado.map(r => (
+                {historialAgrupado.map(r => (
                   <tr key={r._id}>
                     <td>{r.semana}</td>
                     <td>{r.sector}</td>
                     <td>{r.supervisor}</td>
+                    <td>{r.ofrenda}</td>
                     <td>
                       {r.estadoComite === "CONFIRMADO" && (
                         <span style={{ color: "green" }}>✔ Confirmado</span>
@@ -273,6 +312,11 @@ export default function ComiteReportes({ usuario, onLogout }) {
                     <td>{r.comiteRevisor}</td>
                   </tr>
                 ))}
+                <tr style={{ fontWeight: "bold", background: "#F3F4F6" }}>
+                  <td colSpan="3">TOTAL OFRENDA</td>
+                  <td>{totalOfrendaHistorial}</td>
+                  <td colSpan="2"></td>
+                </tr>
               </tbody>
             </table>
           </div>
