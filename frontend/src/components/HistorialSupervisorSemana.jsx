@@ -2,23 +2,29 @@ import { useEffect, useState } from "react";
 import api from "../services/api";
 import { exportarExcel, exportarPDF } from "../utils/exportar";
 
-export default function HistorialSupervisorSemana({ sector }) {
+export default function HistorialSupervisorSemana({ sector, supervisor }) {
   const [reportes, setReportes] = useState([]);
   const [semanasSeleccionadas, setSemanasSeleccionadas] = useState([]);
 
   useEffect(() => {
-    api
-      .get(`/reportes/sector/${sector}`)
-      .then(res => setReportes(res.data || []));
-  }, [sector]);
+    if (!sector || !supervisor) return;
 
-  /*  SEMANA ACTUAL */
+    api
+      .get(`/reportes/sector/${sector}`, {
+        params: { supervisor }
+      })
+      .then(res => setReportes(res.data || []))
+      .catch(err => console.error(err));
+
+  }, [sector, supervisor]);
+
+  /* 🗓️ SEMANA ACTUAL */
   const hoy = new Date();
   const inicioAnio = new Date(hoy.getFullYear(), 0, 1);
   const dias = Math.floor((hoy - inicioAnio) / (1000 * 60 * 60 * 24));
   const semanaActual = Math.ceil((dias + inicioAnio.getDay() + 1) / 7);
 
-  /*  SEMANAS DISPONIBLES */
+  /* 🗓️ SEMANAS DISPONIBLES */
   const semanasDisponibles = [
     ...new Set(reportes.map(r => r.semana))
   ].sort((a, b) => a - b);
@@ -36,19 +42,18 @@ export default function HistorialSupervisorSemana({ sector }) {
     setSemanasSeleccionadas([]);
   };
 
-  /*  FILTRADO */
+  /* 🔍 FILTRADO */
   const reportesFiltrados =
     semanasSeleccionadas.length === 0
       ? reportes
       : reportes.filter(r => semanasSeleccionadas.includes(r.semana));
 
-  /*  ELIMINAR REPORTE */
+  /* 🗑️ ELIMINAR REPORTE */
   const eliminarReporte = async id => {
     if (!window.confirm("¿Seguro que deseas eliminar este reporte?")) return;
 
     try {
       await api.delete(`/reportes/${id}`);
-
       setReportes(prev => prev.filter(r => r._id !== id));
     } catch (error) {
       console.error(error);
@@ -56,7 +61,7 @@ export default function HistorialSupervisorSemana({ sector }) {
     }
   };
 
-  /*  TOTALES */
+  /* 🔢 TOTALES */
   const totales = reportesFiltrados.reduce(
     (t, r) => {
       t.martes += r.infoIglesia.martes;
@@ -136,23 +141,8 @@ export default function HistorialSupervisorSemana({ sector }) {
           onClick={() =>
             exportarPDF(
               [
-                "Semana",
-                "Facilitador",
-                "Red",
-                "Líder",
-                "Mar",
-                "Jue",
-                "Dom",
-                "HNO",
-                "INV",
-                "TOT",
-                "REC",
-                "Conv",
-                "VP",
-                "BA",
-                "EVG",
-                "Ofrenda",
-                "Revisión Comité"
+                "Semana","Facilitador","Red","Líder","Mar","Jue","Dom",
+                "HNO","INV","TOT","REC","Conv","VP","BA","EVG","Ofrenda","Revisión Comité"
               ],
               [
                 ...reportesFiltrados.map(r => [
@@ -175,10 +165,7 @@ export default function HistorialSupervisorSemana({ sector }) {
                   r.estadoComite
                 ]),
                 [
-                  "TOTALES",
-                  "",
-                  "",
-                  "",
+                  "TOTALES","","","",
                   totales.martes,
                   totales.jueves,
                   totales.domingo,
@@ -247,37 +234,18 @@ export default function HistorialSupervisorSemana({ sector }) {
                 <td>{r.infoCelula.BA}</td>
                 <td>{r.infoCelula.EVG}</td>
                 <td>{r.infoCelula.Ofrenda}</td>
+
                 <td>
-                  {r.estadoComite === "CONFIRMADO" && (
-                    <span style={{ color: "green" }}>
-                      ✔ Confirmado
-                    </span>
-                  )}
-
-                  {r.estadoComite === "RECHAZADO" && (
-                    <span style={{ color: "red" }}>
-                      ✖ Rechazado
-                    </span>
-                  )}
-
-                  {r.estadoComite === "PENDIENTE" && (
-                    <span style={{ color: "#6b7280" }}>
-                      ⏳ Pendiente
-                    </span>
-                  )}
+                  {r.estadoComite === "CONFIRMADO" && <span style={{color:"green"}}>✔ Confirmado</span>}
+                  {r.estadoComite === "RECHAZADO" && <span style={{color:"red"}}>✖ Rechazado</span>}
+                  {r.estadoComite === "PENDIENTE" && <span style={{color:"#6b7280"}}>⏳ Pendiente</span>}
                 </td>
 
-                {/*  SOLO SEMANA ACTUAL */}
                 <td>
-                  {r.semana === semanaActual-1 && (
+                  {r.semana === semanaActual-1 &&  r.estadoComite === "PENDIENTE" && (
                     <button
                       onClick={() => eliminarReporte(r._id)}
-                      style={{
-                        background: "transparent",
-                        border: "none",
-                        cursor: "pointer",
-                        fontSize: 16
-                      }}
+                      style={{background:"transparent",border:"none",cursor:"pointer",fontSize:16}}
                     >
                       🗑️
                     </button>
@@ -286,7 +254,7 @@ export default function HistorialSupervisorSemana({ sector }) {
               </tr>
             ))}
 
-            <tr style={{ fontWeight: "bold", background: "#F3F4F6" }}>
+            <tr style={{fontWeight:"bold",background:"#F3F4F6"}}>
               <td colSpan={4}>TOTALES</td>
               <td>{totales.martes}</td>
               <td>{totales.jueves}</td>
@@ -309,68 +277,15 @@ export default function HistorialSupervisorSemana({ sector }) {
   );
 }
 
-/*  ESTILOS (SIN CAMBIOS) */
 const styles = {
-  filtroBox: {
-    marginBottom: 15
-  },
-  semanas: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 8,
-    marginBottom: 8
-  },
-  semana: {
-    padding: "6px 12px",
-    borderRadius: 20,
-    border: "1px solid #ccc",
-    background: "#F3F4F6",
-    cursor: "pointer"
-  },
-  semanaActiva: {
-    padding: "6px 12px",
-    borderRadius: 20,
-    border: "none",
-    background: "#0B5C9E",
-    color: "#fff",
-    cursor: "pointer"
-  },
-  limpiar: {
-    marginTop: 5,
-    background: "transparent",
-    border: "none",
-    color: "#DC2626",
-    cursor: "pointer",
-    fontWeight: "bold"
-  },
-  exportar: {
-    display: "flex",
-    gap: 12,
-    marginBottom: 15
-  },
-  excel: {
-    background: "#16A34A",
-    color: "#fff",
-    padding: "8px 14px",
-    borderRadius: 8,
-    border: "none",
-    cursor: "pointer"
-  },
-  pdf: {
-    background: "#DC2626",
-    color: "#fff",
-    padding: "8px 14px",
-    borderRadius: 8,
-    border: "none",
-    cursor: "pointer"
-  },
-  tablaWrapper: {
-    overflowX: "auto"
-  },
-  table: {
-    width: "100%",
-    minWidth: 1200,
-    borderCollapse: "collapse"
-  }
+  filtroBox:{marginBottom:15},
+  semanas:{display:"flex",flexWrap:"wrap",gap:8,marginTop:8,marginBottom:8},
+  semana:{padding:"6px 12px",borderRadius:20,border:"1px solid #ccc",background:"#F3F4F6",cursor:"pointer"},
+  semanaActiva:{padding:"6px 12px",borderRadius:20,border:"none",background:"#0B5C9E",color:"#fff",cursor:"pointer"},
+  limpiar:{marginTop:5,background:"transparent",border:"none",color:"#DC2626",cursor:"pointer",fontWeight:"bold"},
+  exportar:{display:"flex",gap:12,marginBottom:15},
+  excel:{background:"#16A34A",color:"#fff",padding:"8px 14px",borderRadius:8,border:"none",cursor:"pointer"},
+  pdf:{background:"#DC2626",color:"#fff",padding:"8px 14px",borderRadius:8,border:"none",cursor:"pointer"},
+  tablaWrapper:{overflowX:"auto"},
+  table:{width:"100%",minWidth:1200,borderCollapse:"collapse"}
 };
