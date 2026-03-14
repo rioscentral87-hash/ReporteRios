@@ -70,24 +70,33 @@ export default function HistorialReportes() {
   /* =========================
      APLICAR FILTROS AUTOMÁTICO
   ========================= */
-  useEffect(() => {
-    let datos = [...reportes];
+useEffect(() => {
+  let datos = [...reportes];
 
-    if (sectorSel) {
-      datos = datos.filter(r => r.sector === Number(sectorSel));
+  if (sectorSel) {
+    datos = datos.filter(r => r.sector === Number(sectorSel));
+  }
+
+  // solo filtrar supervisor si NO hay sector
+  if (supervisorSel && !sectorSel) {
+    datos = datos.filter(r => r.supervisor === supervisorSel);
+  }
+
+  if (semanaSel) {
+    datos = datos.filter(r => r.semana === semanaSel);
+  }
+
+  /* ✅ ORDENAR POR SEMANA Y LUEGO POR SECTOR */
+  datos.sort((a, b) => {
+    if (a.semana !== b.semana) {
+      return a.semana - b.semana; // primero semana
     }
+    return a.sector - b.sector; // luego sector
+  });
 
-    // solo filtrar supervisor si NO hay sector
-    if (supervisorSel && !sectorSel) {
-      datos = datos.filter(r => r.supervisor === supervisorSel);
-    }
+  setFiltrados(datos);
 
-    if (semanaSel) {
-      datos = datos.filter(r => r.semana === semanaSel);
-    }
-
-    setFiltrados(datos);
-  }, [sectorSel, supervisorSel, semanaSel, reportes]);
+}, [sectorSel, supervisorSel, semanaSel, reportes]);
 
   /* =========================
      LIMPIAR FILTROS
