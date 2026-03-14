@@ -45,15 +45,27 @@ router.post("/", async (req, res) => {
 router.get("/sector/:sector", async (req, res) => {
   try {
     const sector = Number(req.params.sector);
-    const { fecha } = req.query;
+    const { supervisor, fecha } = req.query;
 
-    const filtro = { sector };
+    if (!supervisor) {
+      return res.status(400).json({
+        message: "El nombre del supervisor es obligatorio"
+      });
+    }
+
+    const filtro = {
+      sector,
+      supervisor
+    };
+
     if (fecha) filtro.fecha = fecha;
 
-    const reportes = await Reporte.find(filtro);
+    const reportes = await Reporte.find(filtro).sort({ semana: 1 });
+
     res.json(reportes);
+
   } catch (error) {
-    console.error(error);
+    console.error("Error obteniendo reportes:", error);
     res.status(500).json({ message: "Error obteniendo reportes" });
   }
 });
