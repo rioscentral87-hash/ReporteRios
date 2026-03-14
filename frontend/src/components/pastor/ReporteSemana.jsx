@@ -21,9 +21,9 @@ export default function ReporteSemana() {
   }, []);
 
   /*  SOLO SEMANA ACTUAL */
-  const filtrados = reportes.filter(
-    r => r.anio === anioActual && r.semana === semanaActual
-  );
+  const filtrados = reportes
+  .filter(r => r.anio === anioActual && r.semana === semanaActual)
+  .sort((a, b) => a.sector - b.sector); // ordenar por sector ascendente
 
   /*  TOTALES */
   const totales = filtrados.reduce(
