@@ -51,7 +51,8 @@ export default function CrearReporteSemana({ usuario, redes, volver }) {
     }
 
     try {
-      const res = await api.get(`/reportes/sector/${usuario.sector}`);
+      const res = await api.get(
+  `/reportes/sector/${usuario.sector}?supervisor=${usuario.nombre}`);
 
       const existentes = res.data.filter(
         r => r.anio === anio && r.semana === Number(semana)
