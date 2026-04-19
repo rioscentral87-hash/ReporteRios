@@ -5,6 +5,9 @@ import { exportarExcel, exportarPDF } from "../utils/exportar";
 export default function HistorialSupervisorSemana({ sector, supervisor }) {
   const [reportes, setReportes] = useState([]);
   const [semanasSeleccionadas, setSemanasSeleccionadas] = useState([]);
+  // nuevo
+  const [editandoId, setEditandoId] = useState(null);
+  const [datosEditados, setDatosEditados] = useState({});
 
   useEffect(() => {
     if (!sector || !supervisor) return;
@@ -18,18 +21,18 @@ export default function HistorialSupervisorSemana({ sector, supervisor }) {
 
   }, [sector, supervisor]);
 
-  /* 🗓️ SEMANA ACTUAL */
+  /* SEMANA ACTUAL */
   const hoy = new Date();
   const inicioAnio = new Date(hoy.getFullYear(), 0, 1);
   const dias = Math.floor((hoy - inicioAnio) / (1000 * 60 * 60 * 24));
   const semanaActual = Math.ceil((dias + inicioAnio.getDay() + 1) / 7);
 
-  /* 🗓️ SEMANAS DISPONIBLES */
+  /* SEMANAS DISPONIBLES */
   const semanasDisponibles = [
     ...new Set(reportes.map(r => r.semana))
   ].sort((a, b) => a - b);
 
-  /* ➕ / ➖ TOGGLE SEMANA */
+  /* TOGGLE SEMANA */
   const toggleSemana = semana => {
     setSemanasSeleccionadas(prev =>
       prev.includes(semana)
@@ -60,6 +63,46 @@ export default function HistorialSupervisorSemana({ sector, supervisor }) {
       alert("❌ Error eliminando reporte");
     }
   };
+
+  // NUEVO.. EDITAR REPORTE (SOLO SEMANA ACTUAL)
+  const iniciarEdicion = (reporte) => {
+    setEditandoId(reporte._id);
+    setDatosEditados({ ...reporte });
+  };
+
+  const cancelarEdicion = () => {
+    setEditandoId(null);
+    setDatosEditados({});
+  };
+
+  const handleChange = (campo, valor, tipo) => {
+    setDatosEditados(prev => ({
+      ...prev,
+      [tipo]: {
+        ...prev[tipo],
+        [campo]: Number(valor)
+      }
+    }));
+  };
+
+  const guardarEdicion = async () => {
+    try {
+      const res = await api.put(`/reportes/${editandoId}`, datosEditados);
+
+      setReportes(prev =>
+        prev.map(r => (r._id === editandoId ? res.data : r))
+      );
+
+      setEditandoId(null);
+      setDatosEditados({});
+      alert("✅ Reporte actualizado correctamente");
+    } catch (error) {
+      console.error(error);
+      alert("❌ Error actualizando reporte");
+    }
+  };
+  // TERMINA LO NUEVO
+
 
   /* 🔢 TOTALES */
   const totales = reportesFiltrados.reduce(
@@ -211,7 +254,8 @@ export default function HistorialSupervisorSemana({ sector, supervisor }) {
               <th>EVG</th>
               <th>Ofrenda</th>
               <th>Revisión Comité</th>
-              <th></th>
+              <th>Editar</th>
+              <th>Eliminar</th>
             </tr>
           </thead>
 
@@ -222,30 +266,152 @@ export default function HistorialSupervisorSemana({ sector, supervisor }) {
                 <td>{r.supervisor}</td>
                 <td>{r.red}</td>
                 <td>{r.lider}</td>
-                <td>{r.infoIglesia.martes}</td>
-                <td>{r.infoIglesia.jueves}</td>
-                <td>{r.infoIglesia.domingo}</td>
-                <td>{r.infoCelula.HNO}</td>
-                <td>{r.infoCelula.INV}</td>
-                <td>{r.infoCelula.TOT}</td>
-                <td>{r.infoCelula.REC}</td>
-                <td>{r.infoCelula.Conv}</td>
-                <td>{r.infoCelula.VP}</td>
-                <td>{r.infoCelula.BA}</td>
-                <td>{r.infoCelula.EVG}</td>
-                <td>{r.infoCelula.Ofrenda}</td>
+                <td>{editandoId === r._id ? (
+                    <input
+                      value={datosEditados.infoIglesia.martes}
+                      onChange={e => handleChange("martes", e.target.value, "infoIglesia")}
+                      style={{ width: 50 }}
+                    />
+                  ) : (
+                    r.infoIglesia.martes
+                  )}</td>
+                <td>{editandoId === r._id ? (
+                    <input
+                      value={datosEditados.infoIglesia.jueves}
+                      onChange={e => handleChange("jueves", e.target.value, "infoIglesia")}
+                      style={{ width: 50 }}
+                    />
+                  ) : (
+                    r.infoIglesia.jueves
+                  )}</td>
+                <td>{editandoId === r._id ? (
+                    <input
+                      value={datosEditados.infoIglesia.domingo}
+                      onChange={e => handleChange("domingo", e.target.value, "infoIglesia")}
+                      style={{ width: 50 }}
+                    />
+                  ) : (
+                    r.infoIglesia.domingo
+                  )}</td>
+                <td>{editandoId === r._id ? (
+                    <input
+                      value={datosEditados.infoCelula.HNO}
+                      onChange={e => handleChange("HNO", e.target.value, "infoCelula")}
+                      style={{ width: 50 }}
+                    />
+                  ) : (
+                    r.infoCelula.HNO
+                  )}</td>
+                <td>{editandoId === r._id ? (
+                    <input
+                      value={datosEditados.infoCelula.INV}
+                      onChange={e => handleChange("INV", e.target.value, "infoCelula")}
+                      style={{ width: 50 }}
+                    />
+                  ) : (
+                    r.infoCelula.INV
+                  )}</td>
+                <td>{editandoId === r._id ? (
+                    <input
+                      value={datosEditados.infoCelula.TOT}
+                      onChange={e => handleChange("TOT", e.target.value, "infoCelula")}
+                      style={{ width: 50 }}
+                    />
+                  ) : (
+                    r.infoCelula.TOT
+                  )}</td>
+                <td>{editandoId === r._id ? (
+                    <input
+                      value={datosEditados.infoCelula.REC}
+                      onChange={e => handleChange("REC", e.target.value, "infoCelula")}
+                      style={{ width: 50 }}
+                    />
+                  ) : (
+                    r.infoCelula.REC
+                  )}</td>
+                <td>{editandoId === r._id ? (
+                    <input
+                      value={datosEditados.infoCelula.Conv}
+                      onChange={e => handleChange("Conv", e.target.value, "infoCelula")}
+                      style={{ width: 50 }}
+                    />
+                  ) : (
+                    r.infoCelula.Conv
+                  )}</td>
+                <td>{editandoId === r._id ? (
+                    <input
+                      value={datosEditados.infoCelula.VP}
+                      onChange={e => handleChange("VP", e.target.value, "infoCelula")}
+                      style={{ width: 50 }}
+                    />
+                  ) : (
+                    r.infoCelula.VP
+                  )}</td>
+                <td>{editandoId === r._id ? (
+                    <input
+                      value={datosEditados.infoCelula.BA}
+                      onChange={e => handleChange("BA", e.target.value, "infoCelula")}
+                      style={{ width: 50 }}
+                    />
+                  ) : (
+                    r.infoCelula.BA
+                  )}</td>
+                <td>{editandoId === r._id ? (
+                    <input
+                      value={datosEditados.infoCelula.EVG}
+                      onChange={e => handleChange("EVG", e.target.value, "infoCelula")}
+                      style={{ width: 50 }}
+                    />
+                  ) : (
+                    r.infoCelula.EVG
+                  )}</td>
+                <td>{editandoId === r._id ? (
+                    <input
+                      value={datosEditados.infoCelula.Ofrenda}
+                      onChange={e => handleChange("Ofrenda", e.target.value, "infoCelula")}
+                      style={{ width: 50 }}
+                    />
+                  ) : (
+                    r.infoCelula.Ofrenda
+                  )}</td>
 
                 <td>
                   {r.estadoComite === "CONFIRMADO" && <span style={{color:"green"}}>✔ Confirmado</span>}
                   {r.estadoComite === "RECHAZADO" && <span style={{color:"red"}}>✖ Rechazado</span>}
                   {r.estadoComite === "PENDIENTE" && <span style={{color:"#6b7280"}}>⏳ Pendiente</span>}
                 </td>
-
+                <td>
+                  {r.semana === semanaActual - 1 && r.estadoComite === "PENDIENTE" && (
+                    editandoId === r._id ? (
+                      <>
+                        <button
+                          onClick={guardarEdicion}
+                          style={iconBtn}
+                        >
+                          💾
+                        </button>
+                        <button
+                          onClick={cancelarEdicion}
+                          style={iconBtn}
+                        >
+                          ❌
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => iniciarEdicion(r)}
+                        style={iconBtn}
+                      >
+                        ✏️
+                      </button>
+                    )
+                  )}
+                </td>
                 <td>
                   {r.semana === semanaActual-1 &&  r.estadoComite === "PENDIENTE" && (
                     <button
                       onClick={() => eliminarReporte(r._id)}
-                      style={{background:"transparent",border:"none",cursor:"pointer",fontSize:16}}
+                      style={iconBtn}
                     >
                       🗑️
                     </button>
@@ -288,4 +454,11 @@ const styles = {
   pdf:{background:"#DC2626",color:"#fff",padding:"8px 14px",borderRadius:8,border:"none",cursor:"pointer"},
   tablaWrapper:{overflowX:"auto"},
   table:{width:"100%",minWidth:1200,borderCollapse:"collapse"}
+};
+const iconBtn = {
+  background: "transparent",
+  border: "none",
+  cursor: "pointer",
+  fontSize: 16,
+  marginRight: 5
 };
