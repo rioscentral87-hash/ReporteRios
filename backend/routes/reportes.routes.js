@@ -4,7 +4,7 @@ const Reporte = require("../models/Reporte");
 const auth = require("../middlewares/auth");
 const { getSemanaActual } = require("../utils/fecha");
 
-// 🟢 OBTENER TODOS LOS REPORTES (PASTOR)
+// OBTENER TODOS LOS REPORTES (PASTOR)
 router.get("/", async (req, res) => {
   try {
     const reportes = await Reporte.find();
@@ -14,7 +14,7 @@ router.get("/", async (req, res) => {
     res.status(500).json({ message: "Error obteniendo reportes" });
   }
 });
-// 🟢 REPORTE SEMANAL (PASTOR)
+//  REPORTE SEMANAL (PASTOR)
 router.get("/semana", async (req, res) => {
   try {
     const reportes = await Reporte.find();
@@ -24,7 +24,7 @@ router.get("/semana", async (req, res) => {
     res.status(500).json({ message: "Error obteniendo reporte semana" });
   }
 });
-// 🟢 CREAR REPORTES (SUPERVISOR)
+//  CREAR REPORTES (SUPERVISOR)
 router.post("/", async (req, res) => {
   try {
     const reportes = req.body;
@@ -41,7 +41,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-// 🟢 HISTORIAL POR SECTOR (SUPERVISOR)
+// OBTENER REPORTES POR SECTOR  (SUPERVISOR)
 router.get("/sector/:sector", async (req, res) => {
   try {
     const sector = Number(req.params.sector);
@@ -71,7 +71,7 @@ router.get("/sector/:sector", async (req, res) => {
 });
 
 
-// 🗑️ ELIMINAR REPORTE POR ID
+// ELIMINAR REPORTE POR ID
 router.delete("/:id", async (req, res) => {
   try {
     const eliminado = await Reporte.findByIdAndDelete(req.params.id);
@@ -84,6 +84,49 @@ router.delete("/:id", async (req, res) => {
   } catch (error) {
     console.error("Error eliminando reporte:", error);
     res.status(500).json({ message: "Error eliminando reporte" });
+  }
+});
+
+// ACTUALIZAR REPORTE (SUPERVISOR)
+router.put("/:id", async (req, res) => {
+  try {
+    const reporte = await Reporte.findById(req.params.id);
+
+    if (!reporte) {
+      return res.status(404).json({ message: "Reporte no encontrado" });
+    }
+
+    // Validamos semana actual
+    const semanaActual = getSemanaActual();
+
+    if (reporte.semana !== semanaActual - 1) {
+      return res.status(403).json({
+        message: "Solo se puede editar el reporte de la semana actual"
+      });
+    }
+
+    // Validamos estado comité
+    if (reporte.estadoComite !== "PENDIENTE") {
+      return res.status(403).json({
+        message: "No se puede editar un reporte ya revisado por el comité"
+      });
+    }
+
+    // Actualizamos campos
+    const actualizado = await Reporte.findByIdAndUpdate(
+      req.params.id,
+      {
+        infoIglesia: req.body.infoIglesia,
+        infoCelula: req.body.infoCelula
+      },
+      { new: true }
+    );
+
+    res.json(actualizado);
+
+  } catch (error) {
+    console.error("Error actualizando reporte:", error);
+    res.status(500).json({ message: "Error actualizando reporte" });
   }
 });
 
@@ -147,7 +190,7 @@ router.get("/pendientes-comite", async (req, res) => {
 
 router.get("/pendientes-comite-semana", async (req, res) => {
   try {
-    const semanaActual = getSemanaActual(); // helper
+    const semanaActual = getSemanaActual()-1; // helper
     const semanaRevision = semanaActual - 1;
 
     const reportes = await Reporte.find({
