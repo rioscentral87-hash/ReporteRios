@@ -10,7 +10,7 @@ export default function CrearReporteSemana({ usuario, redes, volver }) {
   const semanas = Array.from({ length: 52 }, (_, i) => i + 1);
 
   /* =========================
-      SEMANA ACTUAL REAL
+    SEMANA ACTUAL REAL
   ========================== */
   const obtenerSemanaActual = () => {
     const hoy = new Date();
@@ -22,7 +22,25 @@ export default function CrearReporteSemana({ usuario, redes, volver }) {
   const semanaActual = obtenerSemanaActual();
 
   /* =========================
-      SINCRONIZAR SEMANA/ANIO
+   VALIDAR FECHA LÍMITE (MARTES 6PM)
+========================= */
+  const fueraDeTiempo = () => {
+    const ahora = new Date();
+
+    const dia = ahora.getDay(); // 0=Domingo, 2=Martes
+    const hora = ahora.getHours();
+
+    // Si es después del martes
+    if (dia > 2) return true;
+
+    // Si es martes después de las 6pm
+    if (dia === 2 && hora >= 18) return true;
+
+    return false;
+  };
+
+  /* =========================
+    SINCRONIZAR SEMANA/ANIO
   ========================== */
   useEffect(() => {
     if (filas.length > 0) {
@@ -37,7 +55,7 @@ export default function CrearReporteSemana({ usuario, redes, volver }) {
   }, [semana, anio]);
 
   /* =========================
-      CREAR SOLO LÍDERES FALTANTES
+     CREAR SOLO LÍDERES FALTANTES
   ========================== */
   const crear = async () => {
     if (!semana) {
@@ -47,6 +65,12 @@ export default function CrearReporteSemana({ usuario, redes, volver }) {
 
     if (Number(semana) > semanaActual) {
       alert("⚠️ No puede crear reportes para semanas futuras");
+      return;
+    }
+
+    // NUEVA VALIDACIÓN
+    if (fueraDeTiempo()) {
+      alert("⛔ El tiempo para crear reportes ya cerró (Martes 6:00 PM)");
       return;
     }
 
@@ -104,7 +128,7 @@ export default function CrearReporteSemana({ usuario, redes, volver }) {
   };
 
   /* =========================
-      CAMBIOS + AUTO-TOT
+    CAMBIOS + AUTO-TOT
   ========================== */
   const cambiar = (i, grupo, campo, valor) => {
     const copia = [...filas];
@@ -127,7 +151,7 @@ export default function CrearReporteSemana({ usuario, redes, volver }) {
   };
 
   /* =========================
-      LIMPIAR VACÍOS → 0
+    LIMPIAR VACÍOS → 0
   ========================== */
   const limpiarNumeros = obj => {
     const limpio = {};
@@ -138,11 +162,17 @@ export default function CrearReporteSemana({ usuario, redes, volver }) {
   };
 
   /* =========================
-      GUARDAR (POR LÍDER)
+    GUARDAR (POR LÍDER)
   ========================== */
   const guardar = async () => {
     try {
       if (filas.length === 0) return;
+
+      // VALIDACIÓN FINAL ANTES DE GUARDAR
+      if (fueraDeTiempo()) {
+        alert("⛔ El tiempo para enviar reportes ya cerró (Martes 6:00 PM)");
+        return;
+      }
 
       const datosFinales = filas.map(f => ({
         ...f,
@@ -160,7 +190,7 @@ export default function CrearReporteSemana({ usuario, redes, volver }) {
   };
 
   /* =========================
-      TOTALES
+     🔢 TOTALES
   ========================== */
   const totales = filas.reduce(
     (t, r) => {
