@@ -190,7 +190,7 @@ router.get("/pendientes-comite", async (req, res) => {
 
 router.get("/pendientes-comite-semana", async (req, res) => {
   try {
-    const semanaActual = getSemanaActual()-1; // helper
+    const semanaActual = getSemanaActual(); // helper
     const semanaRevision = semanaActual - 1;
 
     const reportes = await Reporte.find({
