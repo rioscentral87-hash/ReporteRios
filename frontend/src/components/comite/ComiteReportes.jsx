@@ -56,30 +56,51 @@ export default function ComiteReportes({ usuario, onLogout }) {
   /* ============================
      GUARDAR REVISIÓN
   ============================ */
-  const guardarRevision = async () => {
-    const revisiones = Object.keys(acciones).map(id => ({
+ const guardarRevision = async () => {
+  // 🔍 Solo tomar reportes que sí tengan acción válida
+  const revisiones = Object.entries(acciones)
+    .filter(([_, estado]) =>
+      estado === "CONFIRMADO" || estado === "RECHAZADO"
+    )
+    .map(([id, estado]) => ({
       id,
-      estado: acciones[id]
+      estado
     }));
 
-    if (revisiones.length === 0) {
-      alert("No hay revisiones realizadas");
-      return;
-    }
+  // 🚫 Si no hay revisiones seleccionadas
+  if (revisiones.length === 0) {
+    alert("No hay revisiones realizadas");
+    return;
+  }
 
-    try {
-      await api.put("/reportes/revision-comite-bulk", {
-        revisiones,
-        comiteRevisor: usuario.nombre
-      });
+  // 🧪 Debug para ver qué se envía
+  console.log("Revisiones a guardar:", revisiones);
 
-      alert("Revisión guardada correctamente");
-      cargarRevisionSemanal();
-    } catch (e) {
-      console.error("Error guardando revisión", e);
-      alert("Error al guardar revisión");
-    }
-  };
+  try {
+    const res = await api.put("/reportes/revision-comite-bulk", {
+      revisiones,
+      comiteRevisor: usuario.nombre
+    });
+
+    console.log("Respuesta backend:", res.data);
+
+    alert("✅ Revisión guardada correctamente");
+
+    // 🔄 Recargar datos después de guardar
+    await cargarRevisionSemanal();
+
+    // 🧹 Limpiar acciones para evitar reenviar datos viejos
+    setAcciones({});
+  } catch (e) {
+    console.error("❌ Error guardando revisión", e);
+
+    // Mostrar mensaje del backend si existe
+    const mensaje =
+      e.response?.data?.message || "Error al guardar revisión";
+
+    alert(mensaje);
+  }
+};
 
   /* ============================
      OPCIONES DE SECTORES
