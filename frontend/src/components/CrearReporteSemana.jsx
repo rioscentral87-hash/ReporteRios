@@ -69,10 +69,10 @@ export default function CrearReporteSemana({ usuario, redes, volver }) {
     }
 
     // NUEVA VALIDACIÓN
-    if (fueraDeTiempo()) {
-      alert("⛔ El tiempo para crear reportes ya cerró (Martes 6:00 PM)");
-      return;
-    }
+    //if (fueraDeTiempo()) {
+     // alert("⛔ El tiempo para crear reportes ya cerró (Martes 6:00 PM)");
+     // return;
+    //}
 
     try {
       const res = await api.get(
@@ -169,10 +169,10 @@ export default function CrearReporteSemana({ usuario, redes, volver }) {
       if (filas.length === 0) return;
 
       // VALIDACIÓN FINAL ANTES DE GUARDAR
-      if (fueraDeTiempo()) {
-        alert("⛔ El tiempo para enviar reportes ya cerró (Martes 6:00 PM)");
-        return;
-      }
+      //if (fueraDeTiempo()) {
+       // alert("⛔ El tiempo para enviar reportes ya cerró (Martes 6:00 PM)");
+       // return;
+      //}
 
       const datosFinales = filas.map(f => ({
         ...f,
